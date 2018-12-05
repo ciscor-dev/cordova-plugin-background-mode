@@ -156,7 +156,9 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
     }
 
     [self fireLog:@"keepAwake() calling audioPlayer.play"];
-    [audioPlayer play];
+    if (![audioPlayer play]) {
+    	[self fireLog:@"keepAwake() audioPlayer.play failed"];
+    }
     [self fireLog:@"keepAwake() firing activate event"];
     [self fireEvent:kAPPBackgroundEventActivate];
     [self fireLog:@"keepAwake() exit"];
@@ -213,10 +215,11 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
     // Don't activate the audio session yet
     [session setActive:NO error:NULL];
 
-    // Play music even in background and dont stop playing music
+    // Play music even in background and don't stop playing music
     // even another app starts playing sound
     [session setCategory:AVAudioSessionCategoryPlayback
-                   error:NULL];
+    		withOptions:AVAudioSessionCategoryOptionMixWithOthers
+            error:NULL];
 
     // Active the audio session
     [session setActive:YES error:NULL];
