@@ -155,6 +155,9 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
         return;
     }
 
+    [self fireLog:@"keepAwake() calling configureAudioSession];
+    [self configureAudioSession];
+
     [self fireLog:@"keepAwake() calling audioPlayer.play"];
     if (![audioPlayer play]) {
     	[self fireLog:@"keepAwake() audioPlayer.play failed"];
@@ -209,20 +212,29 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
  */
 - (void) configureAudioSession
 {
-    AVAudioSession* session = [AVAudioSession
+	[self fireLog:@"configureAudioSession() enter"];
+	AVAudioSession* session = [AVAudioSession
                                sharedInstance];
 
-    // Don't activate the audio session yet
-    [session setActive:NO error:NULL];
+	NSError* __autoreleasing err = nil;
 
     // Play music even in background and don't stop playing music
     // even another app starts playing sound
-    [session setCategory:AVAudioSessionCategoryPlayback
+	[self fireLog:@"configureAudioSession() setting category and options"];
+    if (![session setCategory:AVAudioSessionCategoryPlayback
     		withOptions:AVAudioSessionCategoryOptionMixWithOthers
-            error:NULL];
+            error:&err])
+	{
+   		[self fireLog:[NSString stringWithFormat:@"configureAudioSession() failed to set category and options: %@", [err localizedFailureReason]]];
+	}
 
-    // Active the audio session
-    [session setActive:YES error:NULL];
+    // activate the audio session
+	[self fireLog:@"configureAudioSession() activating audio session"];
+    if (![session setActive:YES error:&err]) {
+    	[self fireLog:[NSString stringWithFormat:@"configureAudioSession() failed to activate audio session: %@", [err localizedFailureReason]]];
+    }
+
+	[self fireLog:@"configureAudioSession() exit"];
 };
 
 #pragma mark -
