@@ -267,19 +267,20 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 			break;
 		case AVAudioSessionInterruptionTypeEnded:
 			[self fireLog:@"handleAudioSessionInterruption() type=ended"];
+
+			[self fireLog:@"handleAudioSessionInterruption() firing deactivate event"];
+
+			[self fireEvent:kAPPBackgroundEventDeactivate];
+
+			[self fireLog:@"handleAudioSessionInterruption() calling keepAwake"];
+
+			[self keepAwake];
+
 			break;
 		default:
 			[self fireLog:@"handleAudioSessionInterruption() type=default"];
 			break;
 	}
-
-	[self fireLog:@"handleAudioSessionInterruption() firing deactivate event"];
-
-    [self fireEvent:kAPPBackgroundEventDeactivate];
-
-	[self fireLog:@"handleAudioSessionInterruption() calling keepAwake"];
-
-    [self keepAwake];
 
    	[self fireLog:@"handleAudioSessionInterruption() exit"];
 }
