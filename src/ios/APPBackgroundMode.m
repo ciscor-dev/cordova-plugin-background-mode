@@ -155,7 +155,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
         return;
     }
 
-    [self fireLog:@"keepAwake() calling configureAudioSession];
+    [self fireLog:@"keepAwake() calling configureAudioSession"];
     [self configureAudioSession];
 
     [self fireLog:@"keepAwake() calling audioPlayer.play"];
