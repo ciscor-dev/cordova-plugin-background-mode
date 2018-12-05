@@ -118,11 +118,17 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
  */
 - (void) keepAwake
 {
-    if (!enabled)
+    [self fireLog:@"keepAwake() enter"];
+    if (!enabled) {
+    	[self fireLog:@"keepAwake() not enabled so exiting"];
         return;
+    }
 
+    [self fireLog:@"keepAwake() calling audioPlayer.play"];
     [audioPlayer play];
+    [self fireLog:@"keepAwake() firing activate event"];
     [self fireEvent:kAPPBackgroundEventActivate];
+    [self fireLog:@"keepAwake() exit"];
 }
 
 /**
@@ -229,6 +235,17 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
                     kAPPBackgroundJsNamespace, event];
 
     NSString* js = [NSString stringWithFormat:@"%@%@%@", flag, depFn, fn];
+
+    [self.commandDelegate evalJs:js];
+}
+
+/**
+ * Method to fire a log message event.
+ */
+- (void) fireLog:(NSString*)message
+{
+    NSString* js = [NSString stringWithFormat:@"%@.onlog('%@');",
+                      kAPPBackgroundJsNamespace, message];
 
     [self.commandDelegate evalJs:js];
 }
