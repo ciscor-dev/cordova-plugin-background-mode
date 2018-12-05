@@ -78,6 +78,26 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
                      selector:@selector(handleAudioSessionInterruption:)
                          name:AVAudioSessionInterruptionNotification
                        object:nil];
+
+        [listener addObserver:self
+                     selector:@selector(handleAudioSessionRouteChange:)
+                         name:AVAudioSessionRouteChangeNotification
+                       object:nil];
+
+        [listener addObserver:self
+                     selector:@selector(handleSilenceSecondaryAudioHint:)
+                         name:AVAudioSessionSilenceSecondaryAudioHintNotification
+                       object:nil];
+
+        [listener addObserver:self
+                     selector:@selector(handleMediaServicesWereLost)
+                         name:AVAudioSessionMediaServicesWereLostNotification
+                       object:nil];
+
+        [listener addObserver:self
+                     selector:@selector(handleMediaServicesWereReset)
+                         name:AVAudioSessionMediaServicesWereResetNotification
+                       object:nil];
 }
 
 #pragma mark -
@@ -89,11 +109,16 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
  */
 - (void) enable:(CDVInvokedUrlCommand*)command
 {
-    if (enabled)
+	[self fireLog:@"enable() enter"];
+    if (enabled) {
+    	[self fireLog:@"enable() already enabled so exiting"];
         return;
+    }
 
     enabled = YES;
+    [self fireLog:@"enable() invoking callback"];
     [self execCallback:command];
+    [self fireLog:@"enable() exit"];
 }
 
 /**
@@ -102,12 +127,18 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
  */
 - (void) disable:(CDVInvokedUrlCommand*)command
 {
-    if (!enabled)
+	[self fireLog:@"disable() enter"];
+    if (!enabled) {
+    	[self fireLog:@"disable() not enabled so exiting"];
         return;
+    }
 
     enabled = NO;
+    [self fireLog:@"disable() calling stopKeepingAwake"];
     [self stopKeepingAwake];
+    [self fireLog:@"disable() invoking callback"];
     [self execCallback:command];
+    [self fireLog:@"disable() exit"];
 }
 
 #pragma mark -
@@ -136,15 +167,21 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
  */
 - (void) stopKeepingAwake
 {
+	[self fireLog:@"stopKeepingAwake() enter"];
     if (TARGET_IPHONE_SIMULATOR) {
         NSLog(@"BackgroundMode: On simulator apps never pause in background!");
     }
 
     if (audioPlayer.isPlaying) {
+    	[self fireLog:@"stopKeepingAwake() firing deactivate event"];
         [self fireEvent:kAPPBackgroundEventDeactivate];
+    } else {
+    	[self fireLog:@"stopKeepingAwake() audio not playing, so not firing deactivate event"];
     }
 
+	[self fireLog:@"stopKeepingAwake() calling audioPlayer.pause"];
     [audioPlayer pause];
+    [self fireLog:@"stopKeepingAwake() exit"];
 }
 
 /**
@@ -205,8 +242,113 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
  */
 - (void) handleAudioSessionInterruption:(NSNotification*)notification
 {
+	[self fireLog:@"handleAudioSessionInterruption() enter"];
+
+	NSDictionary *dict = notification.userInfo;
+	NSInteger interruptionType = [[dict valueForKey:AVAudioSessionInterruptionTypeKey] integerValue];
+	switch (interruptionType) {
+		case AVAudioSessionInterruptionTypeBegan:
+			[self fireLog:@"handleAudioSessionInterruption() type=began"];
+			break;
+		case AVAudioSessionInterruptionTypeEnded:
+			[self fireLog:@"handleAudioSessionInterruption() type=ended"];
+			break;
+		default:
+			[self fireLog:@"handleAudioSessionInterruption() type=default"];
+			break;
+	}
+
+	[self fireLog:@"handleAudioSessionInterruption() firing deactivate event"];
+
     [self fireEvent:kAPPBackgroundEventDeactivate];
+
+	[self fireLog:@"handleAudioSessionInterruption() calling keepAwake"];
+
     [self keepAwake];
+
+   	[self fireLog:@"handleAudioSessionInterruption() exit"];
+}
+
+/**
+ * Observe route changes.
+ */
+- (void) handleAudioSessionRouteChange:(NSNotification*)notification
+{
+	[self fireLog:@"handleAudioSessionRouteChange() enter"];
+
+	NSDictionary *dict = notification.userInfo;
+	NSInteger routeChangeReason = [[dict valueForKey:AVAudioSessionRouteChangeReasonKey] integerValue];
+	switch (routeChangeReason) {
+		case AVAudioSessionRouteChangeReasonUnknown:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=unknown"];
+			break;
+		case AVAudioSessionRouteChangeReasonNewDeviceAvailable:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=new device available"];
+			break;
+		case AVAudioSessionRouteChangeReasonOldDeviceUnavailable:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=old device unavailable"];
+			break;
+		case AVAudioSessionRouteChangeReasonCategoryChange:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=category change"];
+			break;
+		case AVAudioSessionRouteChangeReasonOverride:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=override"];
+			break;
+		case AVAudioSessionRouteChangeReasonWakeFromSleep:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=wake from sleep"];
+			break;
+		case AVAudioSessionRouteChangeReasonNoSuitableRouteForCategory:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=no suitable route for category"];
+			break;
+		case AVAudioSessionRouteChangeReasonRouteConfigurationChange:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=route configuration change"];
+			break;
+		default:
+			[self fireLog:@"handleAudioSessionRouteChange() reason=default"];
+			break;
+	}
+
+   	[self fireLog:@"handleAudioSessionRouteChange() exit"];
+}
+
+/**
+ * Observe silence secondary audio hints.
+ */
+- (void) handleSilenceSecondaryAudioHint:(NSNotification*)notification
+{
+	[self fireLog:@"handleSilenceSecondaryAudioHint() enter"];
+
+	NSDictionary *dict = notification.userInfo;
+	NSInteger hintType = [[dict valueForKey:AVAudioSessionSilenceSecondaryAudioHintTypeKey] integerValue];
+	switch (hintType) {
+		case AVAudioSessionSilenceSecondaryAudioHintTypeBegin:
+			[self fireLog:@"handleSilenceSecondaryAudioHint() type=begin"];
+			break;
+		case AVAudioSessionSilenceSecondaryAudioHintTypeEnd:
+			[self fireLog:@"handleSilenceSecondaryAudioHint() type=end"];
+			break;
+		default:
+			[self fireLog:@"handleSilenceSecondaryAudioHint() type=default"];
+			break;
+	}
+
+   	[self fireLog:@"handleSilenceSecondaryAudioHint() exit"];
+}
+
+/**
+ * Observe media services lost.
+ */
+- (void) handleMediaServicesWereLost
+{
+    [self fireLog:@"handleMediaServicesWereLost()"];
+}
+
+/**
+ * Observe media services reset.
+ */
+- (void) handleMediaServicesWereReset
+{
+    [self fireLog:@"handleMediaServicesWereReset()"];
 }
 
 /**
