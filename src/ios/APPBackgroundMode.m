@@ -114,15 +114,13 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
 	if (!enabled) {
     	enabled = YES;
-    	if (!foreground && !audioInterrupted) {
-    		[self fireLog:@"enable() in background and audio not interrupted, so playing audio"];
+    	if (!foreground) {
+    		[self fireLog:@"enable() in background, so playing audio"];
 			[self configureAudioSession];
 			if (![audioPlayer play]) {
 				[self fireLog:@"enable() audioPlayer.play failed"];
 			}
-		}
-		if (!foreground) {
-			[self fireLog:@"enabled() in background, so firing activate event"];
+			[self fireLog:@"enabled() firing activate event"];
 			[self fireEvent:kAPPBackgroundEventActivate];
 		}
     }
@@ -142,11 +140,9 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
     if (enabled) {
     	enabled = NO;
-    	if (!foreground && !audioInterrupted) {
+    	if (!foreground) {
     		[self fireLog:@"disable() in background and audio not interrupted, so pausing audio"];
 			[audioPlayer pause];
-		}
-		if (!foreground) {
 			[self fireLog:@"enabled() in background, so firing deactivate event"];
 			[self fireEvent:kAPPBackgroundEventDeactivate];
         }
@@ -230,8 +226,8 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 {
 	[self fireLog:@"handleApplicationWillEnterForeground() enter"];
 
-	if (enabled && !audioInterrupted) {
-		[self fireLog:@"handleApplicationWillEnterForeground() enabled and audio not interrupted, so pausing audio"];
+	if (enabled) {
+		[self fireLog:@"handleApplicationWillEnterForeground() enabled, so pausing audio"];
 		[audioPlayer pause];
 	}
 
@@ -253,8 +249,8 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 {
     [self fireLog:@"handleApplicationDidEnterBackground() enter"];
 
-    if (enabled && !audioInterrupted) {
-		[self fireLog:@"handleApplicationDidEnterBackground() enabled and audio not interrupted, so playing audio"];
+    if (enabled) {
+		[self fireLog:@"handleApplicationDidEnterBackground() enabled, so playing audio"];
 		[self configureAudioSession];
 		if (![audioPlayer play]) {
 			[self fireLog:@"handleApplicationDidEnterBackground() audioPlayer.play failed"];
