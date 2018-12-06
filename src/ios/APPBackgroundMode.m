@@ -116,10 +116,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
     	enabled = YES;
     	if (!foreground) {
     		[self fireLog:@"enable() in background, so playing audio"];
-			[self configureAudioSession];
-			if (![audioPlayer play]) {
-				[self fireLog:@"enable() audioPlayer.play failed"];
-			}
+    		[self playAudio];
 			[self fireLog:@"enabled() firing activate event"];
 			[self fireEvent:kAPPBackgroundEventActivate];
 		}
@@ -209,20 +206,23 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 	[self fireLog:@"configureAudioSession() exit"];
 };
 
-#pragma mark -
-#pragma mark Helper
-
 /**
- * Simply invokes the callback without any parameter.
+ * Play audio.
  */
-- (void) execCallback:(CDVInvokedUrlCommand*)command
+- (void) playAudio
 {
-    CDVPluginResult *result = [CDVPluginResult
-                               resultWithStatus:CDVCommandStatus_OK];
+	[self fireLog:@"playAudio() enter"];
 
-    [self.commandDelegate sendPluginResult:result
-                                callbackId:command.callbackId];
-}
+	[self fireLog:@"playAudio() configuring audio session"];
+	[self configureAudioSession];
+
+	[self fireLog:@"playAudio() playing audio"];
+	if (![audioPlayer play]) {
+		[self fireLog:@"handleApplicationDidEnterBackground() audioPlayer.play failed"];
+	}
+
+	[self fireLog:@"playAudio() exit"];
+};
 
 /**
  * Handle when app is brought to foreground.
@@ -256,10 +256,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
     if (enabled) {
 		[self fireLog:@"handleApplicationDidEnterBackground() enabled, so playing audio"];
-		[self configureAudioSession];
-		if (![audioPlayer play]) {
-			[self fireLog:@"handleApplicationDidEnterBackground() audioPlayer.play failed"];
-		}
+		[self playAudio];
     }
 
     foreground = NO;
@@ -287,10 +284,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
 			if (enabled && !foreground) {
 				[self fireLog:@"handleAudioSessionInterruption() enabled and in background, so playing audio"];
-				[self configureAudioSession];
-				if (![audioPlayer play]) {
-					[self fireLog:@"handleAudioSessionInterruption() audioPlayer.play failed"];
-				}
+				[self playAudio];
 			}
 
 			audioInterrupted = YES;
@@ -300,10 +294,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
 			if (enabled && !foreground) {
 				[self fireLog:@"handleAudioSessionInterruption() enabled and in background, so playing audio"];
-				[self configureAudioSession];
-				if (![audioPlayer play]) {
-					[self fireLog:@"handleAudioSessionInterruption() audioPlayer.play failed"];
-				}
+				[self playAudio];
 			}
 
 			audioInterrupted = NO;
@@ -355,6 +346,11 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 			break;
 	}
 
+	if (enabled && !foreground) {
+		[self fireLog:@"handleAudioSessionRouteChange() enabled and in background, so playing audio"];
+		[self playAudio];
+	}
+
    	[self fireLog:@"handleAudioSessionRouteChange() exit"];
 }
 
@@ -396,6 +392,21 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 - (void) handleMediaServicesWereReset
 {
     [self fireLog:@"handleMediaServicesWereReset()"];
+}
+
+#pragma mark -
+#pragma mark Helper
+
+/**
+ * Simply invokes the callback without any parameter.
+ */
+- (void) execCallback:(CDVInvokedUrlCommand*)command
+{
+    CDVPluginResult *result = [CDVPluginResult
+                               resultWithStatus:CDVCommandStatus_OK];
+
+    [self.commandDelegate sendPluginResult:result
+                                callbackId:command.callbackId];
 }
 
 /**
