@@ -190,7 +190,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
     // set category and options
 	[self fireLog:@"configureAudioSession() setting category and options"];
-    if (![session setCategory:AVAudioSessionCategoryPlayback
+    if (![session setCategory:AVAudioSessionCategoryPlayAndRecord
     		withOptions:AVAudioSessionCategoryOptionMixWithOthers
             error:&err])
 	{
@@ -345,11 +345,6 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 			[self fireLog:@"handleAudioSessionRouteChange() reason=default"];
 			break;
 	}
-
-	//if (enabled && !foreground) {
-	//	[self fireLog:@"handleAudioSessionRouteChange() enabled and in background, so playing audio"];
-	//	[self playAudio];
-	//}
 
    	[self fireLog:@"handleAudioSessionRouteChange() exit"];
 }
