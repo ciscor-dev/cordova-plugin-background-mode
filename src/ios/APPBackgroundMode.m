@@ -32,7 +32,6 @@ NSString* const kAPPBackgroundJsNamespace = @"cordova.plugins.backgroundMode";
 NSString* const kAPPBackgroundEventActivate = @"activate";
 NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
-
 #pragma mark -
 #pragma mark Life Cycle
 
@@ -51,6 +50,8 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 - (void) pluginInitialize
 {
     enabled = NO;
+    foreground = YES;
+    audioInterrupted = NO;
     [self configureAudioPlayer];
     [self configureAudioSession];
     [self observeLifeCycle];
@@ -65,12 +66,12 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
                                       defaultCenter];
 
         [listener addObserver:self
-                     selector:@selector(keepAwake)
+                     selector:@selector(handleApplicationDidEnterBackground)
                          name:UIApplicationDidEnterBackgroundNotification
                        object:nil];
 
         [listener addObserver:self
-                     selector:@selector(stopKeepingAwake)
+                     selector:@selector(handleApplicationWillEnterForeground)
                          name:UIApplicationWillEnterForegroundNotification
                        object:nil];
 
@@ -110,12 +111,22 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 - (void) enable:(CDVInvokedUrlCommand*)command
 {
 	[self fireLog:@"enable() enter"];
-    if (enabled) {
-    	[self fireLog:@"enable() already enabled so exiting"];
-        return;
+
+	if (!enabled) {
+    	enabled = YES;
+    	if (!foreground && !audioInterrupted) {
+    		[self fireLog:@"enable() in background and audio not interrupted, so playing audio"];
+			[self configureAudioSession];
+			if (![audioPlayer play]) {
+				[self fireLog:@"enable() audioPlayer.play failed"];
+			}
+		}
+		if (!foreground) {
+			[self fireLog:@"enabled() in background, so firing activate event"];
+			[self fireEvent:kAPPBackgroundEventActivate];
+		}
     }
 
-    enabled = YES;
     [self fireLog:@"enable() invoking callback"];
     [self execCallback:command];
     [self fireLog:@"enable() exit"];
@@ -128,14 +139,19 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 - (void) disable:(CDVInvokedUrlCommand*)command
 {
 	[self fireLog:@"disable() enter"];
-    if (!enabled) {
-    	[self fireLog:@"disable() not enabled so exiting"];
-        return;
+
+    if (enabled) {
+    	enabled = NO;
+    	if (!foreground && !audioInterrupted) {
+    		[self fireLog:@"disable() in background and audio not interrupted, so pausing audio"];
+			[audioPlayer pause];
+		}
+		if (!foreground) {
+			[self fireLog:@"enabled() in background, so firing deactivate event"];
+			[self fireEvent:kAPPBackgroundEventDeactivate];
+        }
     }
 
-    enabled = NO;
-    [self fireLog:@"disable() calling stopKeepingAwake"];
-    [self stopKeepingAwake];
     [self fireLog:@"disable() invoking callback"];
     [self execCallback:command];
     [self fireLog:@"disable() exit"];
@@ -143,51 +159,6 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
 #pragma mark -
 #pragma mark Core
-
-/**
- * Keep the app awake.
- */
-- (void) keepAwake
-{
-    [self fireLog:@"keepAwake() enter"];
-    if (!enabled) {
-    	[self fireLog:@"keepAwake() not enabled so exiting"];
-        return;
-    }
-
-    [self fireLog:@"keepAwake() calling configureAudioSession"];
-    [self configureAudioSession];
-
-    [self fireLog:@"keepAwake() calling audioPlayer.play"];
-    if (![audioPlayer play]) {
-    	[self fireLog:@"keepAwake() audioPlayer.play failed"];
-    }
-    [self fireLog:@"keepAwake() firing activate event"];
-    [self fireEvent:kAPPBackgroundEventActivate];
-    [self fireLog:@"keepAwake() exit"];
-}
-
-/**
- * Let the app going to sleep.
- */
-- (void) stopKeepingAwake
-{
-	[self fireLog:@"stopKeepingAwake() enter"];
-    if (TARGET_IPHONE_SIMULATOR) {
-        NSLog(@"BackgroundMode: On simulator apps never pause in background!");
-    }
-
-    if (audioPlayer.isPlaying) {
-    	[self fireLog:@"stopKeepingAwake() firing deactivate event"];
-        [self fireEvent:kAPPBackgroundEventDeactivate];
-    } else {
-    	[self fireLog:@"stopKeepingAwake() audio not playing, so not firing deactivate event"];
-    }
-
-	[self fireLog:@"stopKeepingAwake() calling audioPlayer.pause"];
-    [audioPlayer pause];
-    [self fireLog:@"stopKeepingAwake() exit"];
-}
 
 /**
  * Configure the audio player.
@@ -253,6 +224,54 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 }
 
 /**
+ * Handle when app is brought to foreground.
+ */
+- (void) handleApplicationWillEnterForeground
+{
+	[self fireLog:@"handleApplicationWillEnterForeground() enter"];
+
+	if (enabled && !audioInterrupted) {
+		[self fireLog:@"handleApplicationWillEnterForeground() enabled and audio not interrupted, so pausing audio"];
+		[audioPlayer pause];
+	}
+
+	foreground = YES;
+	audioInterrupted = NO;
+
+	if (enabled) {
+		[self fireLog:@"handleApplicationWillEnterForeground() enabled, so firing deactivate event"];
+		[self fireEvent:kAPPBackgroundEventDeactivate];
+	}
+
+    [self fireLog:@"handleApplicationWillEnterForeground() exit"];
+}
+
+/**
+ * Handle when app enters background.
+ */
+- (void) handleApplicationDidEnterBackground
+{
+    [self fireLog:@"handleApplicationDidEnterBackground() enter"];
+
+    if (enabled && !audioInterrupted) {
+		[self fireLog:@"handleApplicationDidEnterBackground() enabled and audio not interrupted, so playing audio"];
+		[self configureAudioSession];
+		if (![audioPlayer play]) {
+			[self fireLog:@"handleApplicationDidEnterBackground() audioPlayer.play failed"];
+		}
+    }
+
+    foreground = NO;
+
+	if (enabled) {
+		[self fireLog:@"handleApplicationDidEnterBackground() enabled, so firing activate event"];
+		[self fireEvent:kAPPBackgroundEventActivate];
+    }
+
+    [self fireLog:@"handleApplicationDidEnterBackground() exit"];
+}
+
+/**
  * Restart playing sound when interrupted by phone calls.
  */
 - (void) handleAudioSessionInterruption:(NSNotification*)notification
@@ -264,18 +283,20 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 	switch (interruptionType) {
 		case AVAudioSessionInterruptionTypeBegan:
 			[self fireLog:@"handleAudioSessionInterruption() type=began"];
+			audioInterrupted = YES;
 			break;
 		case AVAudioSessionInterruptionTypeEnded:
 			[self fireLog:@"handleAudioSessionInterruption() type=ended"];
 
-			[self fireLog:@"handleAudioSessionInterruption() firing deactivate event"];
+			if (enabled && !foreground) {
+				[self fireLog:@"handleAudioSessionInterruption() enabled and in background, so playing audio"];
+				[self configureAudioSession];
+				if (![audioPlayer play]) {
+					[self fireLog:@"handleAudioSessionInterruption() audioPlayer.play failed"];
+				}
+			}
 
-			[self fireEvent:kAPPBackgroundEventDeactivate];
-
-			[self fireLog:@"handleAudioSessionInterruption() calling keepAwake"];
-
-			[self keepAwake];
-
+			audioInterrupted = NO;
 			break;
 		default:
 			[self fireLog:@"handleAudioSessionInterruption() type=default"];
