@@ -185,8 +185,13 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
 	NSError* __autoreleasing err = nil;
 
-    // Play music even in background and don't stop playing music
-    // even another app starts playing sound
+    // deactivate the audio session
+	[self fireLog:@"configureAudioSession() deactivating audio session"];
+    if (![session setActive:NO error:&err]) {
+    	[self fireLog:[NSString stringWithFormat:@"configureAudioSession() failed to deactivate audio session: %@", [err localizedFailureReason]]];
+    }
+
+    // set category and options
 	[self fireLog:@"configureAudioSession() setting category and options"];
     if (![session setCategory:AVAudioSessionCategoryPlayback
     		withOptions:AVAudioSessionCategoryOptionMixWithOthers
