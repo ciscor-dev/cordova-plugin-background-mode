@@ -346,10 +346,10 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 			break;
 	}
 
-	if (enabled && !foreground) {
-		[self fireLog:@"handleAudioSessionRouteChange() enabled and in background, so playing audio"];
-		[self playAudio];
-	}
+	//if (enabled && !foreground) {
+	//	[self fireLog:@"handleAudioSessionRouteChange() enabled and in background, so playing audio"];
+	//	[self playAudio];
+	//}
 
    	[self fireLog:@"handleAudioSessionRouteChange() exit"];
 }
