@@ -282,10 +282,10 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 		case AVAudioSessionInterruptionTypeBegan:
 			[self fireLog:@"handleAudioSessionInterruption() type=began"];
 
-			if (enabled && !foreground) {
-				[self fireLog:@"handleAudioSessionInterruption() enabled and in background, so playing audio"];
-				[self playAudio];
-			}
+			//if (enabled && !foreground) {
+			//	[self fireLog:@"handleAudioSessionInterruption() enabled and in background, so playing audio"];
+			//	[self playAudio];
+			//}
 
 			audioInterrupted = YES;
 			break;
