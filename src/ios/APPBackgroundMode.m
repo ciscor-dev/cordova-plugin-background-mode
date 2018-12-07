@@ -182,25 +182,19 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
 	NSError* __autoreleasing err = nil;
 
-    // deactivate the audio session
-	[self fireLog:@"configureAudioSession() deactivating audio session"];
-    if (![session setActive:NO error:&err]) {
-    	[self fireLog:[NSString stringWithFormat:@"configureAudioSession() failed to deactivate audio session: %@", [err localizedFailureReason]]];
-    }
-
     // set category and options
 	[self fireLog:@"configureAudioSession() setting category and options"];
     if (![session setCategory:AVAudioSessionCategoryPlayAndRecord
     		withOptions:AVAudioSessionCategoryOptionMixWithOthers
             error:&err])
 	{
-   		[self fireLog:[NSString stringWithFormat:@"configureAudioSession() failed to set category and options: %@", [err localizedFailureReason]]];
+   		[self fireLog:[NSString stringWithFormat:@"configureAudioSession() !!! failed to set category and options: %@", [err localizedFailureReason]]];
 	}
 
     // activate the audio session
 	[self fireLog:@"configureAudioSession() activating audio session"];
     if (![session setActive:YES error:&err]) {
-    	[self fireLog:[NSString stringWithFormat:@"configureAudioSession() failed to activate audio session: %@", [err localizedFailureReason]]];
+    	[self fireLog:[NSString stringWithFormat:@"configureAudioSession() !!! failed to activate audio session: %@", [err localizedFailureReason]]];
     }
 
 	[self fireLog:@"configureAudioSession() exit"];
@@ -217,8 +211,14 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 	[self configureAudioSession];
 
 	[self fireLog:@"playAudio() playing audio"];
+	if ([audioPlayer isPlaying]) {
+		[self fireLog:@"playAudio() !!! audioPlayer already playing prior to call to play"];
+	}
 	if (![audioPlayer play]) {
-		[self fireLog:@"handleApplicationDidEnterBackground() audioPlayer.play failed"];
+		[self fireLog:@"playAudio() !!! audioPlayer.play failed"];
+	}
+	if (![audioPlayer isPlaying]) {
+		[self fireLog:@"playAudio() !!! audioPlayer not playing after call to play"];
 	}
 
 	[self fireLog:@"playAudio() exit"];
