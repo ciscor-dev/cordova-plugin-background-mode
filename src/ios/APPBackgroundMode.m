@@ -115,7 +115,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 	if (!enabled) {
     	enabled = YES;
     	if (!foreground) {
-    		[self fireLog:@"enable() in background, so playing audio"];
+    		[self fireLog:@"enable() in background and not enabled, so playing audio"];
     		[self playAudio];
 			[self fireLog:@"enabled() firing activate event"];
 			[self fireEvent:kAPPBackgroundEventActivate];
@@ -138,9 +138,15 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
     if (enabled) {
     	enabled = NO;
     	if (!foreground) {
-    		[self fireLog:@"disable() in background and audio not interrupted, so pausing audio"];
+    		[self fireLog:@"disable() in background and enabled, so pausing audio"];
+			if (![audioPlayer isPlaying]) {
+				[self fireLog:@"disable() !!! audioPlayer not playing prior to call to pause"];
+			}
 			[audioPlayer pause];
-			[self fireLog:@"enabled() in background, so firing deactivate event"];
+			if ([audioPlayer isPlaying]) {
+				[self fireLog:@"disable() !!! audioPlayer still playing after call to pause"];
+			}
+			[self fireLog:@"enabled() firing deactivate event"];
 			[self fireEvent:kAPPBackgroundEventDeactivate];
         }
     }
@@ -233,14 +239,20 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 
 	if (enabled) {
 		[self fireLog:@"handleApplicationWillEnterForeground() enabled, so pausing audio"];
+		if (![audioPlayer isPlaying]) {
+			[self fireLog:@"handleApplicationWillEnterForeground() !!! audioPlayer not playing prior to call to pause"];
+		}
 		[audioPlayer pause];
+		if ([audioPlayer isPlaying]) {
+			[self fireLog:@"handleApplicationWillEnterForeground() !!! audioPlayer still playing after call to pause"];
+		}
 	}
 
 	foreground = YES;
 	audioInterrupted = NO;
 
 	if (enabled) {
-		[self fireLog:@"handleApplicationWillEnterForeground() enabled, so firing deactivate event"];
+		[self fireLog:@"handleApplicationWillEnterForeground() firing deactivate event"];
 		[self fireEvent:kAPPBackgroundEventDeactivate];
 	}
 
@@ -262,7 +274,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
     foreground = NO;
 
 	if (enabled) {
-		[self fireLog:@"handleApplicationDidEnterBackground() enabled, so firing activate event"];
+		[self fireLog:@"handleApplicationDidEnterBackground() firing activate event"];
 		[self fireEvent:kAPPBackgroundEventActivate];
     }
 
@@ -281,12 +293,6 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
 	switch (interruptionType) {
 		case AVAudioSessionInterruptionTypeBegan:
 			[self fireLog:@"handleAudioSessionInterruption() type=began"];
-
-			//if (enabled && !foreground) {
-			//	[self fireLog:@"handleAudioSessionInterruption() enabled and in background, so playing audio"];
-			//	[self playAudio];
-			//}
-
 			audioInterrupted = YES;
 			break;
 		case AVAudioSessionInterruptionTypeEnded:
