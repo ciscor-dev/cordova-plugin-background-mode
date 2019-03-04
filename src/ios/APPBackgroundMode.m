@@ -191,7 +191,7 @@ NSString* const kAPPBackgroundEventDeactivate = @"deactivate";
     // set category and options
 	[self fireLog:@"configureAudioSession() setting category and options"];
     if (![session setCategory:AVAudioSessionCategoryPlayAndRecord
-    		withOptions:AVAudioSessionCategoryOptionMixWithOthers
+    		withOptions:AVAudioSessionCategoryOptionMixWithOthers + AVAudioSessionCategoryOptionDefaultToSpeaker
             error:&err])
 	{
    		[self fireLog:[NSString stringWithFormat:@"configureAudioSession() !!! failed to set category and options: %@", [err localizedFailureReason]]];
